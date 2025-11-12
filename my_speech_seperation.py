@@ -1,61 +1,64 @@
-from pyannote.audio import Pipeline
 import speech_recognition as sr
 import tempfile
 import os
 import soundfile as sf
+import librosa
+import numpy as np
+from sklearn.cluster import KMeans
 
+# 🔹 오디오 특징 추출 (피치 + 볼륨)
+def extract_features(y, sr):
+    pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
+    pitch = np.mean(pitches[pitches > 0]) if np.any(pitches > 0) else 0
+    volume = np.mean(magnitudes)
+    return [pitch, volume]
 
+# 🔹 화자 분리 + 음성 인식
 def transcribe_audio_with_diarization(audio_file):
-    """
-    pyannote.audio를 사용한 화자 분리 + 음성 인식
-    """
+    # Recognizer 객체
+    recognizer = sr.Recognizer()
 
-    # 1️⃣ 임시 wav 파일 저장 (Streamlit의 UploadedFile 등 대응)
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-        tmp.write(audio_file.read())
-        tmp_path = tmp.name
+    # 1️⃣ 오디오 로드
+    y, sr_rate = librosa.load(audio_file, sr=None)
 
-    try:
-        # 2️⃣ pyannote pipeline 불러오기 (HuggingFace 인증 토큰 필요)
-        # huggingface-cli login 으로 미리 토큰 등록해두어야 합니다.
-        pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1")
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
-        # 3️⃣ 화자 분리 수행
-        diarization = pipeline(tmp_path)
+    # 2️⃣ 오디오를 3초 단위로 분할
+    segment_length = 3 * sr_rate
+    segments = [y[i:i + segment_length] for i in range(0, len(y), segment_length)]
 
-        recognizer = sr.Recognizer()
-        results = []
+    # 3️⃣ 각 세그먼트 특징 추출
+    features = [extract_features(seg, sr_rate) for seg in segments]
 
-        # 4️⃣ 각 화자 세그먼트별 음성 인식
-        for turn, _, speaker in diarization.itertracks(yield_label=True):
-            start_time = turn.start
-            end_time = turn.end
+    # 4️⃣ KMeans로 2명 화자 클러스터링
+    kmeans = KMeans(n_clusters=2, random_state=0).fit(features)
 
-            # 해당 구간만 잘라 임시 wav로 저장
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as segment_wav:
-                y, sr_rate = sf.read(tmp_path)
-                start_sample = int(start_time * sr_rate)
-                end_sample = int(end_time * sr_rate)
-                sf.write(segment_wav.name, y[start_sample:end_sample], sr_rate)
+    results = []
 
-                # STT 수행
-                with sr.AudioFile(segment_wav.name) as source:
-                    audio_data = recognizer.record(source)
-                    try:
-                        text = recognizer.recognize_google(audio_data, language="ko-KR")
-                        results.append(f"{speaker}: {text}")
-                    except sr.UnknownValueError:
-                        pass
-                    except sr.RequestError as e:
-                        print(f"Google STT 오류: {e}")
-                os.unlink(segment_wav.name)
+    # 5️⃣ 각 세그먼트별 STT 수행
+    for i, segment in enumerate(segments):
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_wav:
+            sf.write(tmp_wav.name, segment, sr_rate)
+            tmp_path = tmp_wav.name
 
-        return results
+        try:
+            with sr.AudioFile(tmp_path) as source:
+                audio_data = recognizer.record(source)
+                try:
+                    text = recognizer.recognize_google(audio_data, language="ko-KR")
+                    speaker = f"화자{kmeans.labels_[i]+1}"
+                    results.append(f"{speaker}: {text}")
+                except sr.UnknownValueError:
+                    results.append(f"화자{kmeans.labels_[i]+1}: [인식 불가]")
+                except sr.RequestError as e:
+                    results.append(f"화자{kmeans.labels_[i]+1}: [STT 오류 {e}]")
+        finally:
+            os.unlink(tmp_path)
 
-    finally:
-        # 임시 파일 정리
-        os.unlink(tmp_path)
+    return results
 
 
-
+# 🔹 테스트
+if __name__ == "__main__":
+    audio_path = "sample.wav"
+    summary = transcribe_audio_with_diarization(audio_path)
+    for line in summary:
+        print(line)
