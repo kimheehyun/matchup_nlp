@@ -1,2 +1,6 @@
 # matchup_nlp
 음성 파일(.wav)로 녹음된 회의 내용을 자동으로 텍스트화하고, 화자를 구분하여 회의록을 작성한 후, AI를 활용해 핵심 내용을 요약하는 시스템을 개발
+
+
+
+https://matchupnlp-vmepyramtxwprmvcvtiwp9.streamlit.app/
