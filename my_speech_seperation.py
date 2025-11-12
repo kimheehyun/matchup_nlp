@@ -19,7 +19,8 @@ def transcribe_audio_with_diarization(audio_file):
         # 2️⃣ pyannote pipeline 불러오기 (HuggingFace 인증 토큰 필요)
         # huggingface-cli login 으로 미리 토큰 등록해두어야 합니다.
         pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1")
-
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
         # 3️⃣ 화자 분리 수행
         diarization = pipeline(tmp_path)
 
@@ -55,5 +56,6 @@ def transcribe_audio_with_diarization(audio_file):
     finally:
         # 임시 파일 정리
         os.unlink(tmp_path)
+
 
 
