@@ -8,7 +8,7 @@ import os
 
 st.write("### 회의록 요약 챗봇 (Groq LLM 버전) ###") 
 
-uploaded_file = st.file_uploader("Upload a sound file", type=["wav","m4a"])
+uploaded_file = st.file_uploader("Upload a sound file", type=["wav"])
 
 if uploaded_file:
     summary_list = transcribe_audio_with_diarization(uploaded_file)
@@ -48,4 +48,5 @@ if uploaded_file:
 
 else:
     st.warning("오디오 파일을 업로드해주세요!")
+
 
