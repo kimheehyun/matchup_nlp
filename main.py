@@ -31,7 +31,7 @@ if uploaded_file:
         """
 
         response = client.chat.completions.create(
-            model="all-MiniLM-L6-v2",   
+            model="allama-3.3-70b-versatile",   
             messages=[
                 {"role": "system", "content": "너는 전문 회의 요약 비서야."},
                 {"role": "user", "content": prompt}
@@ -48,6 +48,7 @@ if uploaded_file:
 
 else:
     st.warning("오디오 파일을 업로드해주세요!")
+
 
 
 
