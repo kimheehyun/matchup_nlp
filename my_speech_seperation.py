@@ -6,34 +6,34 @@ import librosa
 import numpy as np
 from sklearn.cluster import KMeans
 
-# 🔹 오디오 특징 추출 (피치 + 볼륨)
+# 오디오 특징 추출 (피치 + 볼륨)
 def extract_features(y, sr):
     pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
     pitch = np.mean(pitches[pitches > 0]) if np.any(pitches > 0) else 0
     volume = np.mean(magnitudes)
     return [pitch, volume]
 
-# 🔹 화자 분리 + 음성 인식
+#  화자 분리 + 음성 인식
 def transcribe_audio_with_diarization(audio_file):
     # Recognizer 객체
     recognizer = sr.Recognizer()
 
-    # 1️⃣ 오디오 로드
+   
     y, sr_rate = librosa.load(audio_file, sr=None)
 
-    # 2️⃣ 오디오를 3초 단위로 분할
+    # 오디오를 3초 단위로 분할
     segment_length = 3 * sr_rate
     segments = [y[i:i + segment_length] for i in range(0, len(y), segment_length)]
 
-    # 3️⃣ 각 세그먼트 특징 추출
+    # 각 세그먼트 특징 추출
     features = [extract_features(seg, sr_rate) for seg in segments]
 
-    # 4️⃣ KMeans로 2명 화자 클러스터링
+    # KMeans로 2명 화자 클러스터링
     kmeans = KMeans(n_clusters=2, random_state=0).fit(features)
 
     results = []
 
-    # 5️⃣ 각 세그먼트별 STT 수행
+    #  각 세그먼트별 STT 수행
     for i, segment in enumerate(segments):
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_wav:
             sf.write(tmp_wav.name, segment, sr_rate)
@@ -56,9 +56,10 @@ def transcribe_audio_with_diarization(audio_file):
     return results
 
 
-# 🔹 테스트
+#   테스트
 if __name__ == "__main__":
     audio_path = "sample.wav"
     summary = transcribe_audio_with_diarization(audio_path)
     for line in summary:
         print(line)
+
