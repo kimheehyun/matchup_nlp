@@ -6,7 +6,8 @@ speechrecognition
 librosa
 scikit-learn
 groq
-pyannote.audio
+pyannote.audio==3.1.1
 torch
 torchvision
 torchaudio
+pyannote.core==4.0.1 
