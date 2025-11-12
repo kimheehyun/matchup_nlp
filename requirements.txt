@@ -1,0 +1,8 @@
+streamlit
+numpy
+requests
+soundfile
+speechrecognition
+librosa
+scikit-learn
+groq
