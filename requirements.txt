@@ -6,3 +6,7 @@ speechrecognition
 librosa
 scikit-learn
 groq
+pyannote.audio
+torch
+torchvision
+torchaudio
